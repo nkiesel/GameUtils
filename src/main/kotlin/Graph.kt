@@ -1,3 +1,6 @@
+import java.util.PriorityQueue
+import kotlin.collections.forEach
+
 // from https://github.com/alexhwoods/alexhwoods.com/blob/master/kotlin-algorithms/src/main/kotlin/com/alexhwoods/graphs/datastructures/Graph.kt
 
 fun <T> List<Pair<T, T>>.getUniqueValuesFromPairs(predicate: (T) -> Boolean): Set<T> = this
@@ -98,5 +101,55 @@ fun <T> walk(start: T, next: (T) -> Iterable<T>, walk: Walk): Sequence<IndexedVa
                 enqueue(IndexedValue(a.index + 1, b))
             }
         }
+    }
+}
+
+data class ANode<T>(val name: T, val goalHeuristic: Int)
+data class AEdge<T>(val to: ANode<T>, val weight: Int)
+
+class AStarGraph<T>(val adjacencyMap: Map<ANode<T>, List<AEdge<T>>>) {
+
+    private data class ANodeScore<T>(val node: ANode<T>, val fScore: Int)
+
+    fun findShortestPath(
+        start: ANode<T>,
+        goal: ANode<T>,
+    ): List<ANode<T>>? {
+        val openSet = PriorityQueue<ANodeScore<T>>(compareBy { it.fScore })
+        val gScores = mutableMapOf<ANode<T>, Int>().withDefault { Int.MAX_VALUE }
+        val cameFrom = mutableMapOf<ANode<T>, ANode<T>>()
+
+        gScores[start] = 0
+        openSet.add(ANodeScore(start, start.goalHeuristic))
+
+        while (openSet.isNotEmpty()) {
+            val current = openSet.poll().node
+            if (current == goal) return reconstructPath(cameFrom, goal)
+
+            adjacencyMap[current]?.forEach { edge ->
+                val tentativeGScore = gScores.getValue(current) + edge.weight
+                if (tentativeGScore < gScores.getValue(edge.to)) {
+                    cameFrom[edge.to] = current
+                    gScores[edge.to] = tentativeGScore
+                    val fScore = tentativeGScore + edge.to.goalHeuristic
+
+                    // Add to openSet if not already present with a better score
+                    if (openSet.none { it.node == edge.to }) {
+                        openSet.add(ANodeScore(edge.to, fScore))
+                    }
+                }
+            }
+        }
+        return null // No path found
+    }
+
+    private fun reconstructPath(cameFrom: Map<ANode<T>, ANode<T>>, current: ANode<T>): List<ANode<T>> {
+        val path = mutableListOf(current)
+        var temp = current
+        while (cameFrom.containsKey(temp)) {
+            temp = cameFrom[temp]!!
+            path.add(0, temp)
+        }
+        return path
     }
 }

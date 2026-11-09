@@ -61,7 +61,8 @@ enum class Direction {
 
 @JvmInline
 value class LongPos(val value: Long) {
-    constructor(x: Int, y: Int): this((x.toLong() shl 32) or (y.toLong() and 0xFFFF_FFFFL))
+    constructor(x: Int, y: Int) : this((x.toLong() shl 32) or (y.toLong() and 0xFFFF_FFFFL))
+
     override fun toString() = "[$x,$y]"
     operator fun component1() = value.shr(32).toInt()
     operator fun component2() = (value and 0xFFFF_FFFFL).toInt()
@@ -71,6 +72,8 @@ val LongPos.x get() = component1()
 val LongPos.y get() = component2()
 
 data class Point(val x: Int, val y: Int) : Comparable<Point> {
+    constructor(s: String): this(s.ints()[0], s.ints()[1])
+
     fun move(d: Direction, n: Int = 1) = when (d) {
         N -> move(0, -n)
         NE -> move(n, -n)
@@ -107,6 +110,8 @@ data class Point(val x: Int, val y: Int) : Comparable<Point> {
     }
 
     override fun compareTo(other: Point): Int = compareValuesBy(this, other, Point::y, Point::x)
+
+    override fun toString(): String = "[$x,$y]"
 }
 
 class CharArea(private val area: Array<CharArray>) {
@@ -153,15 +158,19 @@ class CharArea(private val area: Array<CharArray>) {
         set(p.x, p.y, c)
     }
 
-    fun tiles(c: Char): Sequence<Point> = tiles { it == c }
+    fun tiles(vararg c: Char): Sequence<Point> = c.toSet().let { s -> tiles { it in s } }
 
     fun tiles(condition: Condition? = null): Sequence<Point> = sequence {
-        for (x in xRange) {
-            for (y in yRange) {
+        for (y in yRange) {
+            for (x in xRange) {
                 Point(x, y).takeIf { ok(it, condition) }?.let { yield(it) }
             }
         }
     }
+
+    fun count(c: Char) = tiles(c).count()
+
+    fun count(condition: Condition? = null) = tiles(condition).count()
 
     fun manhattan(p: Point, max: Int, c: Char): Sequence<Point> = manhattan(p, max) { it == c }
 

@@ -1,10 +1,9 @@
 import java.math.BigInteger
 import java.security.MessageDigest
-import kotlin.io.path.Path
-import kotlin.io.path.readLines
 import kotlin.math.absoluteValue
 
 typealias IntPair = Pair<Int, Int>
+
 
 /**
  * Creates a sequence of permutations. The number of permutations of a list of length n is n!. This is an implementation

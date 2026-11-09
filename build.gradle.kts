@@ -1,5 +1,3 @@
-import jdk.internal.vm.vector.VectorSupport.test
-
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.versions.update)
@@ -8,7 +6,7 @@ plugins {
 }
 
 group = "nkiesel"
-version = "1.0.1"
+version = "1.0.3"
 
 publishing {
     publications {

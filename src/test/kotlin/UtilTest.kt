@@ -9,7 +9,7 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.time.measureTimedValue
 
-val UtilKtTest  by testSuite {
+val UtilTest  by testSuite {
     test("powerSet") {
         val s = setOf("A", "B", "C")
         val ps = s.powerSet().filter { it.isNotEmpty() && it.size != s.size }
