@@ -6,8 +6,6 @@ import kotlin.math.absoluteValue
 
 typealias IntPair = Pair<Int, Int>
 
-fun lines(day: String) = Path("input/$day.txt").readLines()
-
 /**
  * Creates a sequence of permutations. The number of permutations of a list of length n is n!. This is an implementation
  * of the approach described by Dijkstra in 1976. It creates an array of indices, and then in every iteration returns
