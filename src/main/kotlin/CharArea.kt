@@ -201,6 +201,13 @@ class CharArea(private val area: Array<CharArray>) {
         return Point(x, y)
     }
 
+    fun firstOrNull(c: Char): Point? {
+        val y = area.indexOfFirst { c in it }
+        if (y == -1) return null
+        val x = area[y].indexOfFirst { it == c }
+        return Point(x, y)
+    }
+
     fun ok(p: Point, condition: Condition?): Boolean = condition == null || condition(this[p])
 
     fun neighbors4(p: Point, condition: Condition? = null): List<Point> = p.neighbors4().filter { valid(it, condition) }

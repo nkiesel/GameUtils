@@ -47,12 +47,20 @@ val CharAreaTest by testSuite {
         area[1,1] shouldBe ' '
         area[1, 1] = '.'
         area[2, 2] = '.'
-        area.tiles().filter { area[it] != ' ' } shouldHaveSize 2
-        area.tiles { it != ' ' } shouldHaveSize 2
+        area[3, 3] = '*'
+        area.tiles().filter { area[it] != ' ' } shouldHaveSize 3
+        area.tiles('.') shouldHaveSize 2
+        area.tiles('*') shouldHaveSize 1
+        area.tiles('.', '*') shouldHaveSize 3
+        area.tiles { it != ' ' } shouldHaveSize 3
         area.first('.') shouldBe Point(1, 1)
+        area.firstOrNull('.') shouldBe Point(1, 1)
+        area.firstOrNull('x') shouldBe null
 
         area.corners() shouldHaveSize 4
         area.corners() shouldContain Point(0, 0)
+
+        area.count('.') shouldBe 2
 
         area.edges() shouldHaveSize 36
     }
