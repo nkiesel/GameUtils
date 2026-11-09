@@ -340,7 +340,7 @@ infix fun Long.delta(other: Long) = (this - other).absoluteValue
 fun List<Int>.product() = reduceOrNull(Int::times) ?: 0
 fun List<Long>.product() = reduceOrNull(Long::times) ?: 0
 
-enum class Part { ONE, TWO }
+enum class Part { ONE, TWO, THREE }
 
 private
 val md: MessageDigest = MessageDigest.getInstance("MD5")
