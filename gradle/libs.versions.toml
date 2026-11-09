@@ -1,0 +1,15 @@
+[versions]
+kotest = "6.2.6"
+kotlin = "2.4.21"
+plugin-versionsUpdate = "1.1.2"
+testBalloon = "1.2.0"
+
+[libraries]
+kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+testBalloon-framework-core = { module = "de.infix.testBalloon:testBalloon-framework-core", version.ref = "testBalloon" }
+testBalloon-integration-kotest-assertions = { module = "de.infix.testBalloon:testBalloon-integration-kotest-assertions", version.ref = "testBalloon" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+testBalloon = { id = "de.infix.testBalloon", version.ref = "testBalloon" }
+versions-update = { id = "nl.littlerobots.version-catalog-update", version.ref = "plugin-versionsUpdate" }
