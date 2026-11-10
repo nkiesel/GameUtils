@@ -24,12 +24,37 @@ class ShortestPathSolver(private val graph: Map<Int, List<Edge>>) {
     }
 
     /**
-     * Finds the shortest path from [start] through all [requiredPoints] to [end].
+     * Finds the shortest path from [start] to [end], optionally through all [requiredPoints].
      * Returns a Pair containing the total distance and the ordered list of nodes in the path.
-     * For efficiency, all points are just of type Int. So use the indices of the key nodes.
      */
-    fun shortedPath(start: Int, requiredPoints: List<Int>, end: Int): Pair<Int, List<Int>>? {
-        val keyNodes = (setOf(start, end) + requiredPoints).toList()
+    fun shortedPath(
+        start: Int,
+        end: Int,
+        requiredPoints: List<Int> = emptyList(),
+        maxDistance: Int = Int.MAX_VALUE
+    ): Pair<Int, List<Int>>? {
+        val midPoints = requiredPoints.distinct().filter { it != start && it != end }
+        val m = midPoints.size
+
+        if (m == 0) {
+            val [distMap, parentMap] = dijkstra(start)
+            val distance = distMap[end] ?: Int.MAX_VALUE
+
+            if (distance == Int.MAX_VALUE || distance >= maxDistance) return null
+
+            val path = mutableListOf<Int>()
+            var curr: Int? = end
+            while (curr != null) {
+                path.add(curr)
+                curr = parentMap[curr]
+            }
+            path.reverse()
+
+            if (path.isEmpty() || path.first() != start) return null
+            return Pair(distance, path)
+        }
+
+        val keyNodes = (setOf(start, end) + midPoints).toList()
         val n = keyNodes.size
         val nodeToIndex = keyNodes.withIndex().associate { it.value to it.index }
 
@@ -44,19 +69,6 @@ class ShortestPathSolver(private val graph: Map<Int, List<Edge>>) {
             }
         }
 
-        val midPoints = requiredPoints.filter { it != start && it != end }.toSet().toList()
-        val m = midPoints.size
-
-        if (m == 0) {
-            val startIndex = nodeToIndex[start]!!
-            val endIndex = nodeToIndex[end]!!
-            if (distances[startIndex][endIndex] == Int.MAX_VALUE) return null
-            return Pair(
-                distances[startIndex][endIndex],
-                reconstructFullPath(listOf(start, end), parentMaps, nodeToIndex)
-            )
-        }
-
         val numStates = 1 shl m
         val dp = Array(numStates) { IntArray(m) { Int.MAX_VALUE } }
         val parentState = Array(numStates) { IntArray(m) { -1 } }
@@ -65,7 +77,7 @@ class ShortestPathSolver(private val graph: Map<Int, List<Edge>>) {
         for (i in 0 until m) {
             val midNodeIndex = nodeToIndex[midPoints[i]]!!
             val d = distances[startIndex][midNodeIndex]
-            if (d != Int.MAX_VALUE) {
+            if (d != Int.MAX_VALUE && d < maxDistance) {
                 dp[1 shl i][i] = d
             }
         }
@@ -82,9 +94,9 @@ class ShortestPathSolver(private val graph: Map<Int, List<Edge>>) {
                     val edgeWeight = distances[currNodeIndex][nextNodeIndex]
                     if (edgeWeight == Int.MAX_VALUE) continue
 
-                    val nextMask = mask or (1 shl j)
                     val newDist = dp[mask][i] + edgeWeight
-                    if (newDist < dp[nextMask][j]) {
+                    if (newDist < maxDistance && newDist < dp[mask or (1 shl j)][j]) {
+                        val nextMask = mask or (1 shl j)
                         dp[nextMask][j] = newDist
                         parentState[nextMask][j] = i
                     }
@@ -94,7 +106,7 @@ class ShortestPathSolver(private val graph: Map<Int, List<Edge>>) {
 
         val finalMask = numStates - 1
         val endIndex = nodeToIndex[end]!!
-        var minTotalDistance = Int.MAX_VALUE
+        var minTotalDistance = maxDistance
         var lastVisitedIndex = -1
 
         for (i in 0 until m) {
@@ -110,7 +122,7 @@ class ShortestPathSolver(private val graph: Map<Int, List<Edge>>) {
             }
         }
 
-        if (minTotalDistance == Int.MAX_VALUE) return null
+        if (minTotalDistance >= maxDistance) return null
 
         val visitedOrder = mutableListOf<Int>()
         visitedOrder.add(end)
