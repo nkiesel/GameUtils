@@ -1,52 +1,90 @@
 import java.util.*
 
-data class UndirectedEdge(val from: Int, val to: Int, val weight: Int)
+data class UndirectedEdge<T>(val from: T, val to: T, val weight: Int)
+data class DirectedEdge<T>(val from: T, val to: T, val weight: Int)
 
-data class Edge(val to: Int, val weight: Int)
+// Fully encapsulated internal performance infrastructure
+private data class Edge(val to: Int, val weight: Int)
 
 private data class NodeDistance(val node: Int, val distance: Int) : Comparable<NodeDistance> {
     override fun compareTo(other: NodeDistance): Int = this.distance.compareTo(other.distance)
 }
 
-class ShortestPathSolver(private val graph: Map<Int, List<Edge>>) {
+class ShortestPathSolver<T>(
+    undirectedEdges: List<UndirectedEdge<T>> = emptyList(),
+    directedEdges: List<DirectedEdge<T>> = emptyList()
+) {
+    // Unique list of all external node identifiers
+    private val externalNodes: List<T>
 
-    constructor(undirectedEdges: List<UndirectedEdge>) : this(constructGraph(undirectedEdges))
+    // Map for external to internal dense index lookups
+    private val extToInternal: Map<T, Int>
 
-    companion object {
-        private fun constructGraph(edges: List<UndirectedEdge>): Map<Int, List<Edge>> {
-            val adjacencyMap = mutableMapOf<Int, MutableList<Edge>>()
-            for ((from, to, weight) in edges) {
-                adjacencyMap.getOrPut(from) { mutableListOf() }.add(Edge(to, weight))
-                adjacencyMap.getOrPut(to) { mutableListOf() }.add(Edge(from, weight))
-            }
-            return adjacencyMap
+    // Primitive performance optimized graph adjacency array
+    private val graph: Array<MutableList<Edge>>
+    private val numNodes: Int
+
+    init {
+        // 1. Gather all distinct nodes across both edge lists
+        externalNodes = (
+                undirectedEdges.flatMap { listOf(it.from, it.to) } +
+                        directedEdges.flatMap { listOf(it.from, it.to) }
+                ).distinct()
+
+        numNodes = externalNodes.size
+        extToInternal = externalNodes.withIndex().associate { it.value to it.index }
+        graph = Array(numNodes) { mutableListOf() }
+
+        // 2. Map and insert Undirected Edges (Symmetric / Both Ways)
+        for ((from, to, weight) in undirectedEdges) {
+            val internalFrom = extToInternal[from]!!
+            val internalTo = extToInternal[to]!!
+            graph[internalFrom].add(Edge(internalTo, weight))
+            graph[internalTo].add(Edge(internalFrom, weight))
+        }
+
+        // 3. Map and insert Directed Edges (Asymmetric / One Way)
+        for ((from, to, weight) in directedEdges) {
+            val internalFrom = extToInternal[from]!!
+            val internalTo = extToInternal[to]!!
+            graph[internalFrom].add(Edge(internalTo, weight))
         }
     }
 
     /**
      * Finds the shortest path from [start] to [end], optionally through all [requiredPoints].
-     * Returns a Pair containing the total distance and the ordered list of nodes in the path.
+     * Compatible with mixed directed/undirected topologies.
+     * Returns a Pair containing the total distance and the ordered list of external nodes.
      */
     fun shortedPath(
-        start: Int,
-        end: Int,
-        requiredPoints: List<Int> = emptyList(),
+        start: T,
+        end: T,
+        requiredPoints: List<T> = emptyList(),
         maxDistance: Int = Int.MAX_VALUE
-    ): Pair<Int, List<Int>>? {
-        val midPoints = requiredPoints.distinct().filter { it != start && it != end }
-        val m = midPoints.size
+    ): Pair<Int, List<T>>? {
+        val internalStart = extToInternal[start] ?: return null
+        val internalEnd = extToInternal[end] ?: return null
+
+        val internalMidPoints = requiredPoints
+            .mapNotNull { extToInternal[it] }
+            .distinct()
+            .filter { it != internalStart && it != internalEnd }
+
+        val m = internalMidPoints.size
+
+        if (requiredPoints.distinct().filter { it != start && it != end }.size != m) return null
 
         if (m == 0) {
-            val [distMap, parentMap] = dijkstra(start)
-            val distance = distMap[end] ?: Int.MAX_VALUE
+            val (distArray, parentArray) = dijkstra(internalStart)
+            val distance = distArray[internalEnd]
 
             if (distance == Int.MAX_VALUE || distance >= maxDistance) return null
 
-            val path = mutableListOf<Int>()
-            var curr: Int? = end
-            while (curr != null) {
-                path.add(curr)
-                curr = parentMap[curr]
+            val path = mutableListOf<T>()
+            var curr = internalEnd
+            while (curr != -1) {
+                path.add(externalNodes[curr])
+                curr = parentArray[curr]
             }
             path.reverse()
 
@@ -54,18 +92,18 @@ class ShortestPathSolver(private val graph: Map<Int, List<Edge>>) {
             return Pair(distance, path)
         }
 
-        val keyNodes = (setOf(start, end) + midPoints).toList()
+        val keyNodes = (setOf(internalStart, internalEnd) + internalMidPoints).toList()
         val n = keyNodes.size
         val nodeToIndex = keyNodes.withIndex().associate { it.value to it.index }
 
         val distances = Array(n) { IntArray(n) { Int.MAX_VALUE } }
-        val parentMaps = Array(n) { emptyMap<Int, Int>() }
+        val parentArrays = Array(n) { IntArray(0) }
 
         for (i in keyNodes.indices) {
-            val [distMap, parentMap] = dijkstra(keyNodes[i])
-            parentMaps[i] = parentMap
+            val (distArray, parentArray) = dijkstra(keyNodes[i])
+            parentArrays[i] = parentArray
             for (j in keyNodes.indices) {
-                distances[i][j] = distMap[keyNodes[j]] ?: Int.MAX_VALUE
+                distances[i][j] = distArray[keyNodes[j]]
             }
         }
 
@@ -73,9 +111,9 @@ class ShortestPathSolver(private val graph: Map<Int, List<Edge>>) {
         val dp = Array(numStates) { IntArray(m) { Int.MAX_VALUE } }
         val parentState = Array(numStates) { IntArray(m) { -1 } }
 
-        val startIndex = nodeToIndex[start]!!
+        val startIndex = nodeToIndex[internalStart]!!
         for (i in 0 until m) {
-            val midNodeIndex = nodeToIndex[midPoints[i]]!!
+            val midNodeIndex = nodeToIndex[internalMidPoints[i]]!!
             val d = distances[startIndex][midNodeIndex]
             if (d != Int.MAX_VALUE && d < maxDistance) {
                 dp[1 shl i][i] = d
@@ -86,11 +124,11 @@ class ShortestPathSolver(private val graph: Map<Int, List<Edge>>) {
             for (i in 0 until m) {
                 if ((mask and (1 shl i)) == 0 || dp[mask][i] == Int.MAX_VALUE) continue
 
-                val currNodeIndex = nodeToIndex[midPoints[i]]!!
+                val currNodeIndex = nodeToIndex[internalMidPoints[i]]!!
                 for (j in 0 until m) {
                     if ((mask and (1 shl j)) != 0) continue
 
-                    val nextNodeIndex = nodeToIndex[midPoints[j]]!!
+                    val nextNodeIndex = nodeToIndex[internalMidPoints[j]]!!
                     val edgeWeight = distances[currNodeIndex][nextNodeIndex]
                     if (edgeWeight == Int.MAX_VALUE) continue
 
@@ -105,13 +143,13 @@ class ShortestPathSolver(private val graph: Map<Int, List<Edge>>) {
         }
 
         val finalMask = numStates - 1
-        val endIndex = nodeToIndex[end]!!
+        val endIndex = nodeToIndex[internalEnd]!!
         var minTotalDistance = maxDistance
         var lastVisitedIndex = -1
 
         for (i in 0 until m) {
             if (dp[finalMask][i] == Int.MAX_VALUE) continue
-            val currNodeIndex = nodeToIndex[midPoints[i]]!!
+            val currNodeIndex = nodeToIndex[internalMidPoints[i]]!!
             val toEndDist = distances[currNodeIndex][endIndex]
             if (toEndDist != Int.MAX_VALUE) {
                 val total = dp[finalMask][i] + toEndDist
@@ -125,25 +163,27 @@ class ShortestPathSolver(private val graph: Map<Int, List<Edge>>) {
         if (minTotalDistance >= maxDistance) return null
 
         val visitedOrder = mutableListOf<Int>()
-        visitedOrder.add(end)
+        visitedOrder.add(internalEnd)
 
         var currMask = finalMask
         var currI = lastVisitedIndex
         while (currI != -1) {
-            visitedOrder.add(midPoints[currI])
+            visitedOrder.add(internalMidPoints[currI])
             val prevI = parentState[currMask][currI]
             currMask = currMask xor (1 shl currI)
             currI = prevI
         }
-        visitedOrder.add(start)
+        visitedOrder.add(internalStart)
         visitedOrder.reverse()
 
-        return Pair(minTotalDistance, reconstructFullPath(visitedOrder, parentMaps, nodeToIndex))
+        val internalFullPath = reconstructFullPath(visitedOrder, parentArrays, nodeToIndex)
+
+        return Pair(minTotalDistance, internalFullPath.map { externalNodes[it] })
     }
 
-    private fun dijkstra(startNode: Int): Pair<Map<Int, Int>, Map<Int, Int>> {
-        val distances = mutableMapOf<Int, Int>().withDefault { Int.MAX_VALUE }
-        val parents = mutableMapOf<Int, Int>()
+    private fun dijkstra(startNode: Int): Pair<IntArray, IntArray> {
+        val distances = IntArray(numNodes) { Int.MAX_VALUE }
+        val parents = IntArray(numNodes) { -1 }
         val priorityQueue = PriorityQueue<NodeDistance>()
 
         distances[startNode] = 0
@@ -152,11 +192,11 @@ class ShortestPathSolver(private val graph: Map<Int, List<Edge>>) {
         while (priorityQueue.isNotEmpty()) {
             val (node, distance) = priorityQueue.poll()
 
-            if (distance > distances.getValue(node)) continue
+            if (distance > distances[node]) continue
 
-            graph[node]?.forEach { (to, weight) ->
+            graph[node].forEach { (to, weight) ->
                 val newDist = distance + weight
-                if (newDist < distances.getValue(to)) {
+                if (newDist < distances[to]) {
                     distances[to] = newDist
                     parents[to] = node
                     priorityQueue.add(NodeDistance(to, newDist))
@@ -168,7 +208,7 @@ class ShortestPathSolver(private val graph: Map<Int, List<Edge>>) {
 
     private fun reconstructFullPath(
         order: List<Int>,
-        parentMaps: Array<Map<Int, Int>>,
+        parentArrays: Array<IntArray>,
         nodeToIndex: Map<Int, Int>
     ): List<Int> {
         val fullPath = mutableListOf<Int>()
@@ -178,10 +218,10 @@ class ShortestPathSolver(private val graph: Map<Int, List<Edge>>) {
             val fromKeyIndex = nodeToIndex[fromNode]!!
 
             val segment = mutableListOf<Int>()
-            var curr: Int? = toNode
-            while (curr != null && curr != fromNode) {
+            var curr = toNode
+            while (curr != -1 && curr != fromNode) {
                 segment.add(curr)
-                curr = parentMaps[fromKeyIndex][curr]
+                curr = parentArrays[fromKeyIndex][curr]
             }
             segment.reverse()
 

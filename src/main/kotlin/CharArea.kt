@@ -124,6 +124,17 @@ class CharArea(private val area: Array<CharArray>) {
 
     fun clone(def: Char): CharArea = CharArea(xRange.last + 1, yRange.last + 1, def)
 
+    fun surround(border: String): CharArea {
+        val len = border.length
+        val tb = border + border[0].toString().repeat(xRange.count()) + border
+        val na = buildList {
+            repeat(len) { add(tb) }
+            area.forEach { add( border + it.concatToString() + border) }
+            repeat(len) { add(tb) }
+        }
+        return CharArea(na)
+    }
+
     fun clone(): CharArea {
         val next = clone(' ')
         tiles().forEach { next[it] = this[it] }
