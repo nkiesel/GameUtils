@@ -1,7 +1,7 @@
 import java.util.*
 
-data class UndirectedEdge<T>(val from: T, val to: T, val weight: Int)
-data class DirectedEdge<T>(val from: T, val to: T, val weight: Int)
+data class UndirectedEdge<T>(val from: T, val to: T, val weight: Int = 1)
+data class DirectedEdge<T>(val from: T, val to: T, val weight: Int = 1)
 
 // Fully encapsulated internal performance infrastructure
 private data class Edge(val to: Int, val weight: Int)

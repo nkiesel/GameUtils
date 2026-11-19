@@ -16,7 +16,7 @@ fun <T> List<T>.permutations(): Sequence<List<T>> = sequence {
         yield(indices.map { this@permutations[it] })
         val i = (indices.size - 2 downTo 0).firstOrNull { indices[it] < indices[it + 1] } ?: break
         var j = i + 1
-        for (k in i + 2 until indices.size) if (indices[k] in indices[i]..indices[j]) j = k
+        for (k in i + 2..<indices.size) if (indices[k] in indices[i]..indices[j]) j = k
         indices.swap(i, j)
         indices.reverse(i + 1, indices.size)
     }
@@ -54,8 +54,8 @@ fun combinations(parts: Int, total: Int = 100): Sequence<List<Int>> = sequence {
     }
 }
 
-private val n4 = [0 to -1, -1 to 0, 1 to 0, 0 to 1]
-private val n8 = [-1 to -1, 0 to -1, 1 to -1, -1 to 0, 1 to 0, -1 to 1, 0 to 1, 1 to 1]
+val n4 = [0 to -1, -1 to 0, 1 to 0, 0 to 1]
+val n8 = [-1 to -1, 0 to -1, 1 to -1, -1 to 0, 1 to 0, -1 to 1, 0 to 1, 1 to 1]
 
 /**
  * This generates a list of the coordinates of the 4 neighbors of a cell in a 2-dimensional generic array
@@ -161,9 +161,9 @@ fun gcd(ints: IntArray): Int = ints.reduce { acc, i -> gcd(acc, i) }
  */
 tailrec fun gcd(a: Long, b: Long): Long = if (b == 0L) a else gcd(b, a % b)
 
-fun gcdL(longs: List<Long>): Long = longs.reduce { acc, i -> gcd(acc, i) }
+fun gcd(longs: List<Long>): Long = longs.reduce { acc, i -> gcd(acc, i) }
 
-fun gcdL(longs: LongArray): Long = longs.reduce { acc, i -> gcd(acc, i) }
+fun gcd(longs: LongArray): Long = longs.reduce { acc, i -> gcd(acc, i) }
 
 /**
  * least common multiple of 2 Int values
@@ -179,9 +179,9 @@ fun lcm(ints: IntArray): Int = ints.reduce { acc, i -> lcm(acc, i) }
  */
 fun lcm(a: Long, b: Long): Long = a / gcd(a, b) * b
 
-fun lcmL(longs: List<Long>): Long = longs.reduce { acc, i -> lcm(acc, i) }
+fun lcm(longs: List<Long>): Long = longs.reduce { acc, i -> lcm(acc, i) }
 
-fun lcmL(longs: LongArray): Long = longs.reduce { acc, i -> lcm(acc, i) }
+fun lcm(longs: LongArray): Long = longs.reduce { acc, i -> lcm(acc, i) }
 
 /**
  * Manhattan distance in a 2-dimensional array is the distance between 2 points moving only horizontally or vertically
@@ -365,3 +365,5 @@ fun primes(limit: Int): List<Int> {
     }
     return primes
 }
+
+fun Char.repeat(n: Int) = CharArray(n) { this }.concatToString()

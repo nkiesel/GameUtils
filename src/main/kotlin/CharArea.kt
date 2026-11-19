@@ -72,8 +72,6 @@ val LongPos.x get() = component1()
 val LongPos.y get() = component2()
 
 data class Point(val x: Int, val y: Int) : Comparable<Point> {
-    constructor(s: String): this(s.ints()[0], s.ints()[1])
-
     fun move(d: Direction, n: Int = 1) = when (d) {
         N -> move(0, -n)
         NE -> move(n, -n)
@@ -89,11 +87,9 @@ data class Point(val x: Int, val y: Int) : Comparable<Point> {
 
     fun move(p: Point, n: Int = 1) = Point(x + p.x * n, y + p.y * n)
 
-    fun neighbors4() = [0 to -1, -1 to 0, 1 to 0, 0 to 1]
-        .map { [dx, dy] -> Point(x + dx, y + dy) }
+    fun neighbors4() = n4.map { [dx, dy] -> Point(x + dx, y + dy) }
 
-    fun neighbors8() = [-1 to -1, 0 to -1, 1 to -1, -1 to 0, 1 to 0, -1 to 1, 0 to 1, 1 to 1]
-        .map { [dx, dy] -> Point(x + dx, y + dy) }
+    fun neighbors8() = n8.map { [dx, dy] -> Point(x + dx, y + dy) }
 
     operator fun minus(other: Point) = Point(x - other.x, y - other.y)
 
@@ -112,6 +108,10 @@ data class Point(val x: Int, val y: Int) : Comparable<Point> {
     override fun compareTo(other: Point): Int = compareValuesBy(this, other, Point::y, Point::x)
 
     override fun toString(): String = "[$x,$y]"
+
+    companion object {
+        operator fun invoke(s: String) = s.ints().let { [x, y] -> Point(x, y) }
+    }
 }
 
 class CharArea(private val area: Array<CharArray>) {
@@ -121,18 +121,23 @@ class CharArea(private val area: Array<CharArray>) {
 
     val xRange = area[0].indices
     val yRange = area.indices
+    val width = xRange.last - xRange.first + 1
+    val height = yRange.last - yRange.first + 1
 
     fun clone(def: Char): CharArea = CharArea(xRange.last + 1, yRange.last + 1, def)
 
-    fun surround(border: String): CharArea {
-        val len = border.length
-        val tb = border + border[0].toString().repeat(xRange.count()) + border
-        val na = buildList {
-            repeat(len) { add(tb) }
-            area.forEach { add( border + it.concatToString() + border) }
-            repeat(len) { add(tb) }
+    fun surround(vararg border: Char): CharArea {
+        val right = border.joinToString("")
+        val left = right.reversed()
+        val bottom = border.withIndex().map { [i, c] ->
+            left.dropLast(i) + c.repeat(width + i * 2) + right.drop(i)
         }
-        return CharArea(na)
+        val top = bottom.reversed()
+        return CharArea(buildList {
+            addAll(top)
+            area.forEach { add(left + it.concatToString() + right) }
+            addAll(bottom)
+        })
     }
 
     fun clone(): CharArea {
