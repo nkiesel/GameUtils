@@ -21,7 +21,7 @@ val ShortestPathSolverTest by testSuite {
     ]
 
     test("from 0 to 2 with required") {
-        val result = ShortestPathSolver(edges).shortedPath(0, 2, [3, 5])
+        val result = ShortestPathSolver(edges).shortestPath(0, 2, [3, 5])
         result shouldNotBe null
         if (result != null) {
             result.first shouldBe 12
@@ -30,7 +30,7 @@ val ShortestPathSolverTest by testSuite {
     }
 
     test("from 0 to 0 with required") {
-        val result = ShortestPathSolver(edges).shortedPath(0, 0, (1..5).toList())
+        val result = ShortestPathSolver(edges).shortestPath(0, 0, (1..5).toList())
         result shouldNotBe null
         if (result != null) {
             result.first shouldBe 18
@@ -39,7 +39,7 @@ val ShortestPathSolverTest by testSuite {
     }
 
     test("from 0 to 5 without required") {
-        val result = ShortestPathSolver(edges).shortedPath(0, 5)
+        val result = ShortestPathSolver(edges).shortestPath(0, 5)
         result shouldNotBe null
         if (result != null) {
             result.first shouldBe

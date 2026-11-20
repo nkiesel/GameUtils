@@ -56,7 +56,7 @@ class ShortestPathSolver<T>(
      * Compatible with mixed directed/undirected topologies.
      * Returns a Pair containing the total distance and the ordered list of external nodes.
      */
-    fun shortedPath(
+    fun shortestPath(
         start: T,
         end: T,
         requiredPoints: List<T> = emptyList(),
